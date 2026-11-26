@@ -11,6 +11,7 @@ class Run(Base):
     __tablename__ = "runs"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    night_id: Mapped[str | None] = mapped_column(ForeignKey("nights.id"), index=True, nullable=True)
     label: Mapped[str] = mapped_column(String(100))
     parameter: Mapped[float]
     actor: Mapped[str] = mapped_column(String(160))

@@ -7,27 +7,33 @@ import { navigate } from '../router/routes.js';
 import { escapeHtml as e, timeText } from '../utils/format.js';
 
 export async function runsPage(profile, account, id) {
-  const [runs, datasets] = await Promise.all([api.runs(), api.datasets()]);
+  const [runs, datasets, nights] = await Promise.all([api.runs(), api.datasets(), api.nights()]);
   const parameter = profile.parameter;
-  const canSubmit = account.role === 'analyst' && datasets.length > 0;
+  const canSubmit = account.role === 'analyst' && datasets.length > 0 && nights.length > 0;
+  const nightOptions = nights.map(night => `<option value="${night.id}" ${night.id === id ? 'selected' : ''}>
+    ${e(night.name)} · 剩 ${night.remaining}/${night.capacity} 张</option>`).join('');
   const form = canSubmit ? `<form id="run-form">
+    <label>晚场<select name="night_id">${nightOptions}</select></label>
     <label>计算单名称<input name="label" maxlength="100" placeholder="例如本班复核" required></label>
     <label>数据版本<select name="dataset_id">${datasets.map(row =>
-      `<option value="${row.id}" ${row.id === id ? 'selected' : ''}>${e(row.name)} · ${row.count} 行</option>`).join('')}</select></label>
+      `<option value="${row.id}">${e(row.name)} · ${row.count} 行</option>`).join('')}</select></label>
     <label>${e(parameter.label)}<input type="number" name="parameter" min="${parameter.min}" max="${parameter.max}"
       step="${parameter.step}" value="${parameter.default}" required></label>
     <p class="muted">${e(parameter.description)}</p><div class="form-error" data-error role="alert"></div>
     <button type="submit">提交计算</button></form>` :
-    '<p class="muted">分析员可使用已导入的数据版本创建计算单。</p>';
+    (nights.length === 0 ? '<p class="muted">请先在「晚场名额」页创建晚场。</p>' :
+      '<p class="muted">分析员可使用已导入的数据版本创建计算单。</p>');
+  const byId = new Map(nights.map(night => [night.id, night]));
   return {
     html: heading(profile.labels.runs, profile.algorithm) +
       `<div class="board"><aside class="side"><h2>计算设置</h2>${form}</aside>
       <section class="work"><div class="work-head"><h2>计算记录</h2><button type="button" class="quiet" id="refresh-runs">刷新</button></div>
       ${runs.length ? table([
-        {key:'label',label:'计算单'}, {key:'parameter',label:parameter.label}, {key:'status',label:'状态'},
-        {key:'created_at',label:'提交时间'},
+        {key:'label',label:'计算单'}, {key:'night_id',label:'晚场'}, {key:'parameter',label:parameter.label},
+        {key:'status',label:'状态'}, {key:'created_at',label:'提交时间'},
       ], runs, (run, column, value) => {
         if (column.key === 'label') return `<a href="#results/${run.id}">${e(value)}</a>`;
+        if (column.key === 'night_id') return e(byId.get(value)?.name ?? '—');
         if (column.key === 'status') return status(value);
         return column.key === 'created_at' ? e(timeText(value)) : e(value);
       }) : empty('等待首个计算单', '选择数据和参数后提交计算，随后可以在此查看记录。')}

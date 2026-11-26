@@ -17,3 +17,8 @@ class Stage(str, Enum):
 class Decision(str, Enum):
     APPROVE = "approve"
     HOLD = "hold"
+
+
+class ListState(str, Enum):
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"

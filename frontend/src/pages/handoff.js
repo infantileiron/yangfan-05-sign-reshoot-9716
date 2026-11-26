@@ -15,9 +15,13 @@ export async function handoffPage(profile, account, id) {
   const selector = completed.map(item => `<option value="${item.id}" ${item.id === selected?.id ? 'selected' : ''}>${e(item.label)}</option>`).join('');
   const actions = review?.decision === 'approve' ?
     exportButton('/runs/' + run.id + '/handoff.csv', 'handoff.csv', '下载签发清单') : '';
+  const quota = run?.result?.quota;
+  const alreadySent = (run?.dispatches || []).length;
   const form = run && account.role === 'reviewer' && !review ? `
     <form id="review-form">
       <p>选择要交接的样本，再填写复核结论。暂缓可不选样本。</p>
+      ${quota ? `<p class="muted">本晚限额 ${quota.capacity} 张，已签发 ${quota.dispatched} 张，还剩 ${quota.remaining} 张。
+        ${alreadySent ? `本晚已有 ${alreadySent} 张占用名额，重复勾选会被拒绝。` : ''}超出名额的签发会被整单拒绝。</p>` : ''}
       ${table(profile.result_columns, run.result.rows.slice(0, 500), undefined, true)}
       ${run.result.rows.length > 500 ? '<p>本页可签审前 500 条结果。完整计算结果可在结果页下载。</p>' : ''}
       <label>决定<select name="decision"><option value="approve">签发</option><option value="hold">暂缓</option></select></label>

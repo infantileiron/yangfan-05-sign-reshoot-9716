@@ -223,3 +223,17 @@ tbody tr:hover { background: var(--side); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.quota { margin: 1rem 0 1.25rem; padding: 1rem 1.1rem; background: var(--paper); border: 1px solid var(--line); border-inline-start: 4px solid var(--accent); }
+.quota-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .9rem; margin-bottom: .6rem; }
+.quota-head strong { font-family: var(--font-display), "Songti SC", serif; font-size: clamp(1.5rem, 2.6vw, 2.3rem); letter-spacing: -.02em; }
+.quota .track { display: block; height: .7rem; background: var(--side); border: 1px solid var(--line); }
+.quota .track i { display: block; width: var(--amount); height: 100%; background: var(--accent); }
+.timeline { list-style: none; padding: 0; margin: .6rem 0 0; display: grid; gap: .35rem; }
+.timeline li { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; padding: .55rem .65rem; border: 1px solid var(--line); background: var(--paper); }
+.timeline strong { font-variant-numeric: tabular-nums; }
+.timeline a { margin-inline-start: auto; }
+tr.chosen td { background: var(--side); font-weight: 640; }
+table caption { caption-side: top; text-align: start; padding: 0 0 .5rem; font-size: .82rem; }
+.inline-form { margin-top: .9rem; }
+.inline-form button { width: 100%; }

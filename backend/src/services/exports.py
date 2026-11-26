@@ -1,10 +1,9 @@
 from fastapi import HTTPException
 from fastapi.responses import FileResponse, Response
-
 from src.business.profile import PROFILE
 from src.config.settings import ARTIFACTS, Session
 from src.constants.workflow import Decision
-from src.services import reviews, runs
+from src.services import dispatch_lists, reviews, runs
 from src.utils.csv_data import render_csv
 
 
@@ -39,4 +38,23 @@ def signed_download(run_id):
             "\ufeff" + contents,
             media_type="text/csv",
             headers={"Content-Disposition": f'attachment; filename="{run_id}-handoff.csv"'},
+        )
+
+
+LIST_KEYS = ["sample_id", "station", "decision", "risk", "path", "action"]
+
+
+def dispatch_list_download(night_id):
+    with Session() as db:
+        listing = dispatch_lists.current_active(db, night_id)
+        if listing is None:
+            raise HTTPException(409, "本晚还没有启用的补拍清单。")
+        run = runs.require(db, listing.run_id)
+        rows = {row["sample_id"]: row for row in run.result["rows"]}
+        picked = [rows[sample] for sample in listing.samples if sample in rows]
+        contents = render_csv(picked, LIST_KEYS, protect=True)
+        return Response(
+            "﻿" + contents,
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{night_id}-v{listing.version}-dispatch.csv"'},
         )

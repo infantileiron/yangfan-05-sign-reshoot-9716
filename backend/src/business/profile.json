@@ -15,30 +15,90 @@
     "runs": "分流试算",
     "results": "补拍候选",
     "handoff": "点位派发",
+    "nights": "晚场名额",
     "input": "照片测量",
     "action": "拟合质检决策树"
   },
   "algorithm": "代价加权 CART 与最小代价复杂度剪枝",
-  "method": "采用缩版对比度、亮斑覆盖率、文字边缘锐度和最小安全边距预测编辑结论。CART 用加权 Gini 生长，需补拍样本权重为漏派相对代价，可用样本权重为 1。每个剪枝候选只用建树历史拟合，以定剪枝历史的总误派代价选树并列时选叶数少的，再用独立的复盘历史报告误派和漏派。逐张输出真实条件路径、训练叶节点内未加权的补拍占比及现场处理动作。建树、定剪枝和复盘批次都需要两种标签，待处置行只接受空标签，项目要求批次号唯一。",
+  "method": "采用缩版对比度、亮斑覆盖率、文字边缘锐度和最小安全边距预测编辑结论。CART 用加权 Gini 生长，需补拍样本权重为漏派相对代价，可用样本权重为 1。每个剪枝候选只用建树历史拟合，以定剪枝历史的总误派代价选树，并列时选叶数少的。晚间名额有限时，先用定剪枝历史在折算后的限额上比较数种派法（代价阈值前 N、树判定前 N、风险前 N、本晚不派），取总误派代价最低且并列时派得最少的一种，再用独立的复盘历史按同一限额验收漏派与白跑。逐张输出真实条件路径、训练叶节点内未加权的补拍占比及现场处理动作；超出名额的树判定照片列为候补。建树、定剪枝和复盘批次都需要两种标签，待处置行只接受空标签，项目要求批次号唯一。已签发的照片按张占用当晚名额，重算不会退回；同一张照片一晚只能派一次。",
   "seed_name": "huai-night_sign_contact_sheet_20261125.csv",
+  "seed_night": {
+    "key": "huai-night-20261125",
+    "name": "槐栈夜场 11 月 25 日场",
+    "capacity": 6
+  },
   "scenario": [
     "17:05，巡拍领班导入 huai-night_sign_contact_sheet_20261125.csv，包含 160 条已判照片记录与 8 条今日点位记录。",
+    "17:10，分析员建好当晚场次，领班填本晚能补拍的名额（演示为 6 张）。",
     "17:15，编辑检查建树、定剪枝和复盘三段历史都录入了发布或补拍定案。",
-    "17:20，领班把漏派代价设为 3，执行剪枝定参，查看独立复盘组的漏派与误派。",
+    "17:20，领班把漏派代价设为 3，执行剪枝定参；系统在折算名额上比较几种派法，再用独立复盘组报告漏派与白跑。",
     "17:30，东遮廊 HP-Q-01 亮斑覆盖达 67%，进入补拍队列，巡拍员按照条件路径检查高光遮挡。",
     "17:35，南桥楼梯 HP-Q-02 的文字对比度为 0.82，缩图边距 12%，建议保留。",
-    "17:50，主管导出点位派发清单，安排东遮廊和小舞台巡拍路线。",
+    "17:40，复核员把计算单启用为第 1 版补拍清单，导出交给巡拍班；签发两张后本晚只剩 4 个名额。",
+    "17:50，主管安排东遮廊和小舞台巡拍路线。",
+    "18:05，晚到的测量数据导入为新版本后重算；成功则启用第 2 版清单，失败可重试，领班仍用原清单。",
     "18:25，编辑将补拍图按统一缩版复查箭头与文字，再交志愿组入册。"
   ],
   "columns": [
-    {"key": "sample_id", "label": "照片号", "type": "text"},
-    {"key": "station", "label": "布点", "type": "text"},
-    {"key": "stage", "label": "分组", "type": "text", "choices": ["建树历史", "定剪枝历史", "复盘历史", "待处置"]},
-    {"key": "contrast", "label": "缩版文字对比度", "type": "number", "min": 0, "max": 1},
-    {"key": "glare", "label": "亮斑覆盖（%）", "type": "number", "min": 0, "max": 100},
-    {"key": "sharpness", "label": "边缘锐度", "type": "number", "min": 0, "max": 100},
-    {"key": "margin", "label": "最小边距（%）", "type": "number", "min": 0, "max": 50},
-    {"key": "history_label", "label": "编辑定案", "type": "text", "optional": true, "choices": ["可用", "补拍"]}
+    {
+      "key": "sample_id",
+      "label": "照片号",
+      "type": "text"
+    },
+    {
+      "key": "station",
+      "label": "布点",
+      "type": "text"
+    },
+    {
+      "key": "stage",
+      "label": "分组",
+      "type": "text",
+      "choices": [
+        "建树历史",
+        "定剪枝历史",
+        "复盘历史",
+        "待处置"
+      ]
+    },
+    {
+      "key": "contrast",
+      "label": "缩版文字对比度",
+      "type": "number",
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "glare",
+      "label": "亮斑覆盖（%）",
+      "type": "number",
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "sharpness",
+      "label": "边缘锐度",
+      "type": "number",
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "margin",
+      "label": "最小边距（%）",
+      "type": "number",
+      "min": 0,
+      "max": 50
+    },
+    {
+      "key": "history_label",
+      "label": "编辑定案",
+      "type": "text",
+      "optional": true,
+      "choices": [
+        "可用",
+        "补拍"
+      ]
+    }
   ],
   "parameter": {
     "key": "miss_cost",
@@ -50,19 +110,40 @@
     "description": "多派一次补拍记 1 单位。按漏掉一张明显有问题的照片所需折返与资料返工设定系数。"
   },
   "result_columns": [
-    {"key": "sample_id", "label": "照片号"},
-    {"key": "station", "label": "布点"},
-    {"key": "decision", "label": "派发决定"},
-    {"key": "risk", "label": "同叶历史补拍（%）"},
-    {"key": "path", "label": "树的判定条件"},
-    {"key": "action", "label": "现场处理"}
+    {
+      "key": "sample_id",
+      "label": "照片号"
+    },
+    {
+      "key": "station",
+      "label": "布点"
+    },
+    {
+      "key": "decision",
+      "label": "派发决定"
+    },
+    {
+      "key": "risk",
+      "label": "同叶历史补拍（%）"
+    },
+    {
+      "key": "path",
+      "label": "树的判定条件"
+    },
+    {
+      "key": "action",
+      "label": "现场处理"
+    }
   ],
-  "chart": {"key": "risk", "label": "同叶训练照片待补拍占比"},
+  "chart": {
+    "key": "risk",
+    "label": "同叶训练照片待补拍占比"
+  },
   "theme": {
     "display": "Barlow Condensed",
     "body": "Atkinson Hyperlegible Next",
     "hue": 109,
-    "chroma": 0.10,
+    "chroma": 0.1,
     "dark": true,
     "layout": "docket"
   }

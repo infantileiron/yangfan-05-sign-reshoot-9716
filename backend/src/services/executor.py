@@ -3,7 +3,7 @@ import logging
 import math
 from datetime import timedelta
 
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import and_, func, or_, select, update
 
 from src.business.algorithm import analyze
 from src.business.profile import PROFILE
@@ -11,6 +11,8 @@ from src.config.settings import ARTIFACTS, Session
 from src.constants.workflow import Stage
 from src.models.base import new_id, utcnow
 from src.models.dataset import Dataset
+from src.models.dispatch import Dispatch
+from src.models.night import Night
 from src.models.run import Run
 from src.services.audit import record
 from src.services.exports import result_keys
@@ -43,7 +45,17 @@ def claim():
         run.started_at = utcnow()
         run.attempts += 1
         dataset = db.get(Dataset, run.dataset_id)
-        return run.id, run.lease, run.parameter, dataset.rows
+        night = None
+        dispatched = 0
+        sent = []
+        if run.night_id:
+            night = db.get(Night, run.night_id)
+            dispatched = db.scalar(
+                select(func.count()).select_from(Dispatch).where(Dispatch.night_id == run.night_id)
+            )
+            sent = list(db.scalars(select(Dispatch.sample_id).where(Dispatch.night_id == run.night_id)))
+        capacity = night.capacity if night else None
+        return run.id, run.lease, run.parameter, dataset.rows, capacity, dispatched, sent
 
 
 def verify_result(result):
@@ -62,12 +74,12 @@ def verify_result(result):
 
 
 def execute(job):
-    run_id, lease, parameter, rows = job
+    run_id, lease, parameter, rows, capacity, dispatched, sent = job
     artifact = None
     result = None
     error = None
     try:
-        result = verify_result(analyze(rows, parameter))
+        result = verify_result(analyze(rows, parameter, capacity, dispatched, sent))
         artifact = f"{run_id}-{lease}.csv"
         path = ARTIFACTS / artifact
         temporary = path.with_suffix(".tmp")
@@ -89,3 +101,4 @@ def execute(job):
             record(db, "worker", f"run_{stage}", run_id)
     if artifact and (error or not change.rowcount):
         (ARTIFACTS / artifact).unlink(missing_ok=True)
+    return change.rowcount > 0
