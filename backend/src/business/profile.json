@@ -1,0 +1,69 @@
+{
+  "title": "槐栈夜场·可移式导向牌补拍分流",
+  "subtitle": "把读不清的点位照片派回巡拍班，在开场前换掉失真的导向资料。",
+  "team": "槐栈夜场导览组共 14 人，负责两处夜场的可移式导向牌布点、现场照片和志愿者导览资料。",
+  "workflow": "巡拍员用手机拍入场导向牌，编辑把照片缩到志愿者手册的版面尺寸后手动核对箭头、文字和裁边。不清楚的按点位退回补拍。",
+  "pain_points": [
+    "旧手机和新手机的照片缩小之后清晰度差别很大，编辑很难靠缩略图判断。",
+    "灯膜反光、失焦和窄边裁切往往要等整批结束才发现，届时巡拍员已离开原区域。",
+    "为了少漏一张而整批退回，会让巡拍班在开场前多跑多个点位。"
+  ],
+  "upstream": "巡拍班导出的照片编号、覆盖点位、缩版测量值，以及编辑对历史图的发布或补拍定案。",
+  "downstream": "领班拿带现场处置说明的派单补拍，可用照片由编辑核对箭头指向及实际位置后入册。",
+  "labels": {
+    "datasets": "巡拍测量单",
+    "runs": "分流试算",
+    "results": "补拍候选",
+    "handoff": "点位派发",
+    "input": "照片测量",
+    "action": "拟合质检决策树"
+  },
+  "algorithm": "代价加权 CART 与最小代价复杂度剪枝",
+  "method": "采用缩版对比度、亮斑覆盖率、文字边缘锐度和最小安全边距预测编辑结论。CART 用加权 Gini 生长，需补拍样本权重为漏派相对代价，可用样本权重为 1。每个剪枝候选只用建树历史拟合，以定剪枝历史的总误派代价选树并列时选叶数少的，再用独立的复盘历史报告误派和漏派。逐张输出真实条件路径、训练叶节点内未加权的补拍占比及现场处理动作。建树、定剪枝和复盘批次都需要两种标签，待处置行只接受空标签，项目要求批次号唯一。",
+  "seed_name": "huai-night_sign_contact_sheet_20261125.csv",
+  "scenario": [
+    "17:05，巡拍领班导入 huai-night_sign_contact_sheet_20261125.csv，包含 160 条已判照片记录与 8 条今日点位记录。",
+    "17:15，编辑检查建树、定剪枝和复盘三段历史都录入了发布或补拍定案。",
+    "17:20，领班把漏派代价设为 3，执行剪枝定参，查看独立复盘组的漏派与误派。",
+    "17:30，东遮廊 HP-Q-01 亮斑覆盖达 67%，进入补拍队列，巡拍员按照条件路径检查高光遮挡。",
+    "17:35，南桥楼梯 HP-Q-02 的文字对比度为 0.82，缩图边距 12%，建议保留。",
+    "17:50，主管导出点位派发清单，安排东遮廊和小舞台巡拍路线。",
+    "18:25，编辑将补拍图按统一缩版复查箭头与文字，再交志愿组入册。"
+  ],
+  "columns": [
+    {"key": "sample_id", "label": "照片号", "type": "text"},
+    {"key": "station", "label": "布点", "type": "text"},
+    {"key": "stage", "label": "分组", "type": "text", "choices": ["建树历史", "定剪枝历史", "复盘历史", "待处置"]},
+    {"key": "contrast", "label": "缩版文字对比度", "type": "number", "min": 0, "max": 1},
+    {"key": "glare", "label": "亮斑覆盖（%）", "type": "number", "min": 0, "max": 100},
+    {"key": "sharpness", "label": "边缘锐度", "type": "number", "min": 0, "max": 100},
+    {"key": "margin", "label": "最小边距（%）", "type": "number", "min": 0, "max": 50},
+    {"key": "history_label", "label": "编辑定案", "type": "text", "optional": true, "choices": ["可用", "补拍"]}
+  ],
+  "parameter": {
+    "key": "miss_cost",
+    "label": "漏派补拍的相对代价",
+    "default": 3,
+    "min": 1,
+    "max": 8,
+    "step": 1,
+    "description": "多派一次补拍记 1 单位。按漏掉一张明显有问题的照片所需折返与资料返工设定系数。"
+  },
+  "result_columns": [
+    {"key": "sample_id", "label": "照片号"},
+    {"key": "station", "label": "布点"},
+    {"key": "decision", "label": "派发决定"},
+    {"key": "risk", "label": "同叶历史补拍（%）"},
+    {"key": "path", "label": "树的判定条件"},
+    {"key": "action", "label": "现场处理"}
+  ],
+  "chart": {"key": "risk", "label": "同叶训练照片待补拍占比"},
+  "theme": {
+    "display": "Barlow Condensed",
+    "body": "Atkinson Hyperlegible Next",
+    "hue": 109,
+    "chroma": 0.10,
+    "dark": true,
+    "layout": "docket"
+  }
+}
